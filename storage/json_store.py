@@ -13,7 +13,7 @@ class JsonStore:
     def __init__(
         self,
         players_file: str = "data/players.json",
-        tournaments_file: str = "data/tournament/tournaments.json",
+        tournaments_file: str = "data/tournaments/tournaments.json",
     ) -> None:
         self.players_path = Path(players_file)
         self.tournaments_path = Path(tournaments_file)
