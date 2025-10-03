@@ -1,4 +1,4 @@
-# Centre Échecs (CLI)
+# Chess Manager (CLI)
 
 Application Python 3.10+ hors ligne. Lancement :
 ```bash
