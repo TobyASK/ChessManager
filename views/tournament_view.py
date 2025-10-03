@@ -1,7 +1,6 @@
 from __future__ import annotations
 from controllers.tournament_controller import TournamentController
 from models.tournament import Tournament
-import dateparser
 from utils.validators import ask_tournament_dates, ask_national_id
 
 
