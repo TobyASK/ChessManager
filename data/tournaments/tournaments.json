@@ -9,5 +9,125 @@
     "rounds": [],
     "players": [],
     "description": ""
+  },
+  {
+    "name": "Paris Game",
+    "location": "Paris",
+    "start_date": "",
+    "end_date": "",
+    "num_rounds": 4,
+    "current_round_index": 0,
+    "rounds": [],
+    "players": [],
+    "description": ""
+  },
+  {
+    "name": "Paris",
+    "location": "Paris",
+    "start_date": "",
+    "end_date": "",
+    "num_rounds": 3,
+    "current_round_index": 0,
+    "rounds": [],
+    "players": [],
+    "description": "ndznj"
+  },
+  {
+    "name": "Paris",
+    "location": "Online",
+    "start_date": "2025-10-03",
+    "end_date": "2025-10-03",
+    "num_rounds": 3,
+    "current_round_index": 3,
+    "rounds": [
+      {
+        "name": "Round 1",
+        "start_datetime": "2025-10-03T20:00:20",
+        "end_datetime": "2025-10-03T20:00:36",
+        "matches": [
+          [
+            [
+              "AB35678",
+              1.0
+            ],
+            [
+              "AB22756",
+              0.0
+            ]
+          ],
+          [
+            [
+              "HJ25689",
+              1.0
+            ],
+            [
+              "TR56478",
+              0.0
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Round 2",
+        "start_datetime": "2025-10-03T20:00:36",
+        "end_datetime": "2025-10-03T20:00:53",
+        "matches": [
+          [
+            [
+              "HJ25689",
+              0.0
+            ],
+            [
+              "AB35678",
+              1.0
+            ]
+          ],
+          [
+            [
+              "AB22756",
+              1.0
+            ],
+            [
+              "TR56478",
+              0.0
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Round 3",
+        "start_datetime": "2025-10-03T20:00:53",
+        "end_datetime": "2025-10-03T20:01:06",
+        "matches": [
+          [
+            [
+              "AB35678",
+              1.0
+            ],
+            [
+              "TR56478",
+              0.0
+            ]
+          ],
+          [
+            [
+              "AB22756",
+              0.5
+            ],
+            [
+              "HJ25689",
+              0.5
+            ]
+          ]
+        ]
+      }
+    ],
+    "players": [
+      "AB35678",
+      "HJ25689",
+      "AB22756",
+      "TR56478"
+    ],
+    "description": "sfbédfjnqjkd"
   }
 ]

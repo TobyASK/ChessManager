@@ -4,6 +4,7 @@ from controllers.player_controller import PlayerController
 from controllers.tournament_controller import TournamentController
 from views.player_view import PlayerView
 from views.tournament_view import TournamentView
+from views.live_tournament_view import LiveTournamentView
 
 
 class MainMenu:
@@ -18,9 +19,10 @@ class MainMenu:
     def run(self) -> None:
         try:
             while True:
-                print("\n=== Centre Échecs ===")
+                print("\n=== Chess Manager ===")
                 print("1. Joueurs")
                 print("2. Tournois")
+                print("3. Tournoi (en direct)")
                 print("0. Quitter")
                 user_choice = input("> ").strip()
                 if user_choice == "1":
@@ -29,6 +31,8 @@ class MainMenu:
                     self.tournament_controller.player_index = self.player_index
                 elif user_choice == "2":
                     TournamentView(self.tournament_controller).menu()
+                elif user_choice == "3":
+                    LiveTournamentView(self.tournament_controller, self.player_controller, self.player_index).menu()
                 elif user_choice == "0":
                     break
                 else:

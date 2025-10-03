@@ -10,5 +10,23 @@
     "first_name": "Tibo",
     "last_name": "Toto",
     "birthdate": "2025-02-06"
+  },
+  {
+    "player_id": "AB35678",
+    "first_name": "Anis",
+    "last_name": "Bekk",
+    "birthdate": "2007-10-03"
+  },
+  {
+    "player_id": "HJ25689",
+    "first_name": "Aloo",
+    "last_name": "Bo",
+    "birthdate": "2006-07-25"
+  },
+  {
+    "player_id": "GH25555",
+    "first_name": "mARIE",
+    "last_name": "Jojo",
+    "birthdate": "2000-01-02"
   }
 ]

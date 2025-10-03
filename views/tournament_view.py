@@ -2,6 +2,7 @@ from __future__ import annotations
 from controllers.tournament_controller import TournamentController
 from models.tournament import Tournament
 import dateparser
+from utils.validators import ask_tournament_dates, ask_national_id
 
 
 def read_int(prompt: str, default: int | None = None) -> int:
@@ -130,15 +131,7 @@ class TournamentView:
                 if user_choice == "1":
                     name = input("Nom: ").strip()
                     location = input("Lieu: ").strip()
-                    start_date = input("Date début (YYYY-MM-DD): ").strip()
-                    end_date = input("Date fin (YYYY-MM-DD): ").strip()
-                    if start_date == "":
-                        start_date = "today"
-                    if end_date == "":
-                        end_date = "today"
-                    # Parse dates to ensure correct format
-                    start_date = dateparser.parse(start_date).strftime("%Y-%m-%d")
-                    end_date = dateparser.parse(end_date).strftime("%Y-%m-%d")
+                    start_date, end_date = ask_tournament_dates()
                     num_rounds = read_int("Nombre de tours [4]: ", default=4)
                     description = input("Description: ").strip()
                     tournament = self.controller.create_tournament(
@@ -148,7 +141,7 @@ class TournamentView:
                 elif user_choice == "2":
                     tournament = self._select_tournament()
                     if tournament:
-                        player_id = input("ID joueur: ").strip().upper()
+                        player_id = ask_national_id()
                         try:
                             self.controller.register_player(tournament, player_id)
                             print("OK.")

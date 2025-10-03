@@ -1,6 +1,7 @@
 from __future__ import annotations
 from datetime import datetime
 from controllers.player_controller import PlayerController
+from utils.validators import ask_national_id, ask_birthdate
 
 
 def read_date_or_empty(prompt: str) -> str:
@@ -36,12 +37,10 @@ class PlayerView:
                             f"[{player.player_id}] ({player.birthdate})"
                         )
                 elif user_choice == "2":
-                    player_id = input("Identifiant national (ex: AB12345): ").strip().upper()
-                    first_name = input("Prénom: ").strip()
-                    last_name = input("Nom: ").strip()
-                    birthdate = read_date_or_empty(
-                        "Date de naissance (YYYY-MM-DD) [optionnel]: "
-                    )
+                    player_id = ask_national_id()
+                    first_name = input("Prénom: ").strip().capitalize()
+                    last_name = input("Nom: ").strip().capitalize()
+                    birthdate = ask_birthdate()
                     try:
                         created = self.controller.create_player(
                             player_id, first_name, last_name, birthdate
