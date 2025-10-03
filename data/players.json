@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "player_id": "AB22756",
+    "first_name": "Anis",
+    "last_name": "Bekkouche",
+    "birthdate": "2025-02-22"
+  },
+  {
+    "player_id": "TR56478",
+    "first_name": "Tibo",
+    "last_name": "Toto",
+    "birthdate": "2025-02-06"
+  }
+]
