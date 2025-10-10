@@ -40,9 +40,29 @@ class PlayerController:
             last_name=last_name,
             birthdate=birthdate,
         )
+        # Ajoute full_name si absent
+        if not hasattr(new_player, "full_name"):
+            new_player.full_name = f"{first_name} {last_name}".strip()
         self.players.append(new_player)
         self._save()
         return new_player
 
     def get(self, player_id: str) -> Optional[Player]:
         return next((player for player in self.players if player.player_id == player_id), None)
+
+    def exists(self, player_id: str) -> bool:
+        return any(player.player_id == player_id for player in self.players)
+
+    def update_player(self, player_id: str, **kwargs) -> Optional[Player]:
+        player = self.get(player_id)
+        if not player:
+            return None
+        for key, value in kwargs.items():
+            if hasattr(player, key):
+                setattr(player, key, value)
+        self._save()
+        return player
+
+    def print_all(self) -> None:
+        for player in self.players:
+            print(player)

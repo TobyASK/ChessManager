@@ -97,6 +97,9 @@ class TournamentView:
                 elif user_choice == "5":
                     tournament = self._select_tournament()
                     if tournament:
+                        from storage.json_store import JsonStore
+                        from controllers.player_controller import PlayerController
+                        player_controller = PlayerController(JsonStore())
                         for round_obj in tournament.rounds:
                             print(
                                 f"\n{round_obj.name} "
@@ -104,9 +107,13 @@ class TournamentView:
                             )
                             for match_index, match in enumerate(round_obj.matches, start=1):
                                 (player_a_id, score_a), (player_b_id, score_b) = match
+                                player_a = player_controller.get(player_a_id)
+                                player_b = player_controller.get(player_b_id)
+                                name_a = f"{player_a.full_name} [{player_a_id}]" if player_a else player_a_id
+                                name_b = f"{player_b.full_name} [{player_b_id}]" if player_b else player_b_id
                                 print(
-                                    f"  {match_index}. {player_a_id} {score_a} - "
-                                    f"{score_b} {player_b_id}"
+                                    f"  {match_index}. {name_a} {score_a} - "
+                                    f"{score_b} {name_b}"
                                 )
                 elif user_choice == "0":
                     break
@@ -121,10 +128,12 @@ class TournamentView:
                 print("\n[Tournois]")
                 print("1. Créer un tournoi")
                 print("2. Enregistrer un joueur dans un tournoi")
-                print("3. Démarrer le prochain tour")
-                print("4. Saisir un résultat de match")
-                print("5. Terminer le tour en cours")
-                print("6. Rapports")
+                print("3. Retirer un joueur d'un tournoi")
+                print("4. Démarrer le prochain tour")
+                print("5. Saisir un résultat de match")
+                print("6. Terminer le tour en cours")
+                print("7. Réinitialiser un tournoi")
+                print("8. Rapports")
                 print("0. Retour")
                 user_choice = input("> ").strip()
                 if user_choice == "1":
@@ -149,6 +158,15 @@ class TournamentView:
                 elif user_choice == "3":
                     tournament = self._select_tournament()
                     if tournament:
+                        player_id = ask_national_id()
+                        try:
+                            self.controller.remove_player(tournament, player_id)
+                            print("Joueur retiré du tournoi.")
+                        except Exception as error:
+                            print(f"Erreur: {error}")
+                elif user_choice == "4":
+                    tournament = self._select_tournament()
+                    if tournament:
                         try:
                             round_obj = self.controller.start_next_round(tournament)
                             print(
@@ -157,7 +175,7 @@ class TournamentView:
                             )
                         except Exception as error:
                             print(f"Erreur: {error}")
-                elif user_choice == "4":
+                elif user_choice == "5":
                     tournament = self._select_tournament()
                     if tournament:
                         round_index = read_int("Index du tour (1…n): ") - 1
@@ -175,7 +193,7 @@ class TournamentView:
                             print("Résultat enregistré.")
                         except Exception as error:
                             print(f"Erreur: {error}")
-                elif user_choice == "5":
+                elif user_choice == "6":
                     tournament = self._select_tournament()
                     if tournament:
                         try:
@@ -183,7 +201,15 @@ class TournamentView:
                             print("Tour terminé.")
                         except Exception as error:
                             print(f"Erreur: {error}")
-                elif user_choice == "6":
+                elif user_choice == "7":
+                    tournament = self._select_tournament()
+                    if tournament:
+                        try:
+                            self.controller.reset_tournament(tournament)
+                            print("Tournoi réinitialisé.")
+                        except Exception as error:
+                            print(f"Erreur: {error}")
+                elif user_choice == "8":
                     self.reports()
                 elif user_choice == "0":
                     break

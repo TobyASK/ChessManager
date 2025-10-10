@@ -45,7 +45,7 @@ def read_birthdate(prompt: str) -> str:
 
 
 class LiveTournamentView:
-    """CLI pour dérouler un tournoi en direct (création/choix des joueurs)."""
+    """CLI pour dérouler un tournoi en direct (création/choix/gestion complète)."""
 
     def __init__(
         self,
@@ -169,6 +169,9 @@ class LiveTournamentView:
         p = self.player_index.get(player_id)
         if not p:
             return player_id
+        # Utilise full_name si disponible
+        if hasattr(p, "full_name"):
+            return p.full_name
         first = getattr(p, "first_name", "")
         last = getattr(p, "last_name", "")
         full = f"{first} {last}".strip()
@@ -201,15 +204,20 @@ class LiveTournamentView:
 
     # ----- Entrée -----
 
-    def menu(self) -> None:
-        try:
-            print("\n=== Tournoi (en direct) ===")
+    def _select_or_create_tournament(self):
+        """Permet de choisir un tournoi existant ou d'en créer un nouveau."""
+        tournaments = self.controller.list_tournaments()
+        print("\nTournois existants :")
+        for idx, t in enumerate(tournaments, 1):
+            print(f"{idx}. {t.name} ({t.start_date} → {t.end_date}) @ {t.location}")
+        print("0. Créer un nouveau tournoi")
+        choice = read_int("> ", default=0)
+        if choice == 0:
             name = input("Nom du tournoi: ").strip() or "Tournoi amical"
             location = input("Lieu (optionnel): ").strip() or ""
             start_date, end_date = ask_tournament_dates()
             num_rounds = read_int("Nombre de rondes [3]: ", default=3)
             description = input("Description (optionnelle): ").strip() or ""
-
             tournament = self.controller.create_tournament(
                 name=name,
                 location=location,
@@ -219,78 +227,178 @@ class LiveTournamentView:
                 description=description,
             )
             print(f"Tournoi créé: {tournament.name}")
+            return tournament
+        elif 1 <= choice <= len(tournaments):
+            return tournaments[choice - 1]
+        else:
+            print("Choix invalide.")
+            return None
 
-            player_ids = self._pick_four_players()
-            if len(player_ids) != 4:
+    def _add_player_to_tournament(self, tournament):
+        while True:
+            print("\n1. Ajouter joueur existant\n2. Créer nouveau joueur\n0. Retour")
+            choice = input("> ").strip()
+            if choice == "1":
+                self._list_players()
+                pid = self._select_existing_player()
+                if pid:
+                    if pid in tournament.players:
+                        print("Ce joueur est déjà inscrit dans ce tournoi.")
+                    else:
+                        try:
+                            self.controller.register_player(tournament, pid)
+                            print("Joueur ajouté.")
+                        except Exception as e:
+                            print(f"Erreur: {e}")
+            elif choice == "2":
+                pid = self._create_player_flow()
+                if pid:
+                    if pid in tournament.players:
+                        print("Ce joueur est déjà inscrit dans ce tournoi.")
+                    else:
+                        try:
+                            self.controller.register_player(tournament, pid)
+                            print("Joueur créé et ajouté.")
+                        except Exception as e:
+                            print(f"Erreur: {e}")
+            elif choice == "0":
+                break
+            else:
+                print("Choix invalide.")
+
+    def _remove_player_from_tournament(self, tournament):
+        if not tournament.players:
+            print("Aucun joueur à retirer.")
+            return
+        print("Joueurs inscrits :")
+        for pid in tournament.players:
+            print(f"- {pid} ({self._name_of(pid)})")
+        pid = input("ID du joueur à retirer: ").strip().upper()
+        if pid in tournament.players:
+            tournament.players.remove(pid)
+            self.controller._save()
+            print("Joueur retiré.")
+        else:
+            print("ID non trouvé.")
+
+    def _edit_match_result(self, tournament):
+        if not tournament.rounds:
+            print("Aucun tour joué.")
+            return
+        for idx, rnd in enumerate(tournament.rounds, 1):
+            print(f"{idx}. {rnd.name} ({rnd.start_datetime} → {rnd.end_datetime or '...'})")
+        r_idx = read_int("Numéro du tour: ", default=1) - 1
+        if not (0 <= r_idx < len(tournament.rounds)):
+            print("Tour invalide.")
+            return
+        round_obj = tournament.rounds[r_idx]
+        for m_idx, match in enumerate(round_obj.matches, 1):
+            a, b = match
+            print(f"{m_idx}. {self._name_of(a[0])} ({a[1]}) vs {self._name_of(b[0])} ({b[1]})")
+        m_idx = read_int("Numéro du match: ", default=1) - 1
+        if not (0 <= m_idx < len(round_obj.matches)):
+            print("Match invalide.")
+            return
+        score_a = read_float("Score joueur 1 (1/0.5/0): ")
+        score_b = read_float("Score joueur 2 (1/0.5/0): ")
+        try:
+            self.controller.enter_result(
+                tournament, r_idx, m_idx, score_a, score_b
+            )
+            print("Résultat modifié.")
+        except Exception as e:
+            print(f"Erreur: {e}")
+
+    def _show_tournament_details(self, tournament):
+        print(f"\nNom: {tournament.name}")
+        print(f"Lieu: {tournament.location}")
+        print(f"Dates: {tournament.start_date} → {tournament.end_date}")
+        print(f"Description: {tournament.description}")
+        print(f"Nombre de tours: {tournament.num_rounds}")
+        print(f"Joueurs inscrits ({len(tournament.players)}):")
+        for pid in tournament.players:
+            print(f"- {self._name_of(pid)} [{pid}]")
+        print(f"Tours joués: {len(tournament.rounds)}")
+
+    def menu(self) -> None:
+        try:
+            tournament = self._select_or_create_tournament()
+            if not tournament:
+                print("Aucun tournoi sélectionné.")
                 return
 
-            for pid in player_ids:
-                try:
-                    self.controller.register_player(tournament, pid)
-                except Exception as error:
-                    print(f"Erreur inscription {pid}: {error}")
+            while True:
+                print(f"\n=== Gestion du tournoi: {tournament.name} ===")
+                print("1. Ajouter un joueur")
+                print("2. Retirer un joueur")
+                print("3. Lister les joueurs inscrits")
+                print("4. Démarrer le prochain tour")
+                print("5. Saisir/modifier un résultat de match")
+                print("6. Clôturer le tour en cours")
+                print("7. Afficher le classement")
+                print("8. Détails du tournoi")
+                print("0. Retour au menu principal")
+                choice = input("> ").strip()
 
-            print("Joueurs inscrits !")
-
-            current_round = 1
-            while current_round <= num_rounds:
-                print(f"\n=== Ronde {current_round}/{num_rounds} ===")
-                try:
-                    round_obj = self.controller.start_next_round(tournament)
-                except Exception as error:
-                    print(f"Erreur au démarrage du tour: {error}")
-                    break
-
-                pairings = round_obj.matches
-                if not pairings:
-                    print("(Aucun appariement)")
-                    break
-                self._print_pairings(pairings)
-
-                for m_index, match in enumerate(pairings, start=1):
-                    white_id = match[0][0]
-                    black_id = match[1][0]
-                    res = self._ask_result_for_match(m_index, white_id, black_id)
-                    if res == "1-0":
-                        s_a, s_b = 1.0, 0.0
-                    elif res == "0-1":
-                        s_a, s_b = 0.0, 1.0
+                if choice == "1":
+                    self._add_player_to_tournament(tournament)
+                elif choice == "2":
+                    # Affiche la liste des joueurs inscrits avant suppression
+                    if not tournament.players:
+                        print("Aucun joueur à retirer.")
                     else:
-                        s_a, s_b = 0.5, 0.5
+                        print("Joueurs inscrits dans ce tournoi :")
+                        for pid in tournament.players:
+                            print(f"- {pid}: {self._name_of(pid)}")
+                        pid = input("ID du joueur à retirer: ").strip().upper()
+                        if pid in tournament.players:
+                            self.controller.remove_player(tournament, pid)
+                            print("Joueur retiré.")
+                        else:
+                            print("ID non trouvé dans ce tournoi.")
+                elif choice == "3":
+                    print("Joueurs inscrits :")
+                    for pid in tournament.players:
+                        print(f"- {self._name_of(pid)} [{pid}]")
+                elif choice == "4":
                     try:
-                        round_index = getattr(tournament, "current_round_index", current_round - 1)
-                        self.controller.enter_result(
-                            tournament=tournament,
-                            round_index=round_index,
-                            match_index=m_index - 1,
-                            score_player_a=s_a,
-                            score_player_b=s_b,
+                        round_obj = self.controller.start_next_round(tournament)
+                        print(
+                            f"{round_obj.name} démarré, "
+                            f"{len(round_obj.matches)} matchs générés."
                         )
+                        self._print_pairings(round_obj.matches)
                     except Exception as error:
-                        print(f"Erreur enregistrement résultat Table {m_index}: {error}")
-
-                try:
-                    self.controller.end_current_round(tournament)
-                except Exception as error:
-                    print(f"Erreur clôture du tour: {error}")
+                        print(f"Erreur: {error}")
+                elif choice == "5":
+                    self._edit_match_result(tournament)
+                elif choice == "6":
+                    try:
+                        self.controller.end_current_round(tournament)
+                        print("Tour clôturé.")
+                    except Exception as error:
+                        print(f"Erreur: {error}")
+                elif choice == "7":
+                    try:
+                        scores = self.controller.tournament_scores(tournament)
+                        print("\nClassement :")
+                        self._print_scores(scores)
+                    except Exception as error:
+                        print(f"Erreur: {error}")
+                elif choice == "8":
+                    self._show_tournament_details(tournament)
+                elif choice == "0":
                     break
-
-                try:
-                    scores = self.controller.tournament_scores(tournament)
-                    print("\nClassement provisoire :")
-                    self._print_scores(scores)
-                except Exception as error:
-                    print(f"Erreur calcul des scores: {error}")
-
-                current_round += 1
-
-            try:
-                scores = self.controller.tournament_scores(tournament)
-                print("\n=== Classement final ===")
-                self._print_scores(scores)
-            except Exception as error:
-                print(f"Erreur calcul des scores finaux: {error}")
-
-            print("Tournoi terminé !")
+                else:
+                    print("Choix invalide.")
         except KeyboardInterrupt:
             print("\nRetour au menu principal.")
+
+
+def read_float(prompt: str) -> float:
+    raw_value = input(prompt).strip()
+    try:
+        return float(raw_value)
+    except ValueError:
+        print("Valeur invalide.")
+        return read_float(prompt)

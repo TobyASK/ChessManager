@@ -55,7 +55,7 @@ class TournamentController:
         if tournament.current_round_index == 0:
             round_obj.matches = first_round(tournament.players)
         else:
-            round_obj.matches = next_round(tournament.players, tournament.rounds[:-1])
+            round_obj.matches = next_round(tournament.players, tournament.rounds)
         self._save()
         return round_obj
 
@@ -82,3 +82,19 @@ class TournamentController:
 
     def tournament_scores(self, tournament: Tournament) -> Dict[str, float]:
         return compute_scores(tournament.rounds)
+
+    def remove_player(self, tournament: Tournament, player_id: str) -> None:
+        if player_id in tournament.players:
+            tournament.players.remove(player_id)
+            self._save()
+
+    def reset_tournament(self, tournament: Tournament) -> None:
+        tournament.current_round_index = 0
+        tournament.rounds.clear()
+        self._save()
+
+    def get_by_name(self, name: str):
+        for t in self.tournaments:
+            if t.name == name:
+                return t
+        return None

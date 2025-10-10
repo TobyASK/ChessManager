@@ -17,7 +17,7 @@ class Player:
 
     @property
     def full_name(self) -> str:
-        return f"{self.first_name} {self.last_name}"
+        return f"{self.first_name} {self.last_name}".strip()
 
     @staticmethod
     def from_dict(data: Dict) -> "Player":
@@ -27,3 +27,6 @@ class Player:
             last_name=data["last_name"],
             birthdate=data["birthdate"],
         )
+
+    def __str__(self) -> str:
+        return f"{self.full_name} [{self.player_id}] ({self.birthdate})"
