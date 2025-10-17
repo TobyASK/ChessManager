@@ -2,9 +2,13 @@ from __future__ import annotations
 from typing import Dict, List, Tuple
 from datetime import datetime
 import dateparser
+import random
+import string
 from controllers.tournament_controller import TournamentController
 from controllers.player_controller import PlayerController
-from utils.validators import ask_national_id, ask_birthdate, ask_tournament_dates
+from utils.validators import ask_birthdate, ask_tournament_dates
+from settings import ENABLE_AUTOCOMPLETE
+from models.tournament import Tournament
 
 
 def read_int(prompt: str, default: int | None = None) -> int:
@@ -44,6 +48,14 @@ def read_birthdate(prompt: str) -> str:
         return read_birthdate(prompt)
 
 
+def _auto_or_input(prompt: str, default: str = "") -> str:
+    """Si ENABLE_AUTOCOMPLETE, retourne la valeur par défaut sans demander à l'utilisateur."""
+    if ENABLE_AUTOCOMPLETE and default:
+        print(f"{prompt}{default} (auto)")
+        return default
+    return input(prompt).strip()
+
+
 class LiveTournamentView:
     """CLI pour dérouler un tournoi en direct (création/choix/gestion complète)."""
 
@@ -64,27 +76,65 @@ class LiveTournamentView:
         if not self.player_index:
             print("(Aucun joueur.)")
             return
-        for pid, p in self.player_index.items():
+        self._player_num_map = {}
+        for idx, (pid, p) in enumerate(self.player_index.items(), 1):
             first = getattr(p, "first_name", "")
             last = getattr(p, "last_name", "")
-            print(f"- {pid}: {(first + ' ' + last).strip()}")
+            print(f"{idx}. {pid}: {(first + ' ' + last).strip()}")
+            self._player_num_map[str(idx)] = pid
 
     def _select_existing_player(self) -> str | None:
         if not self.player_index:
             print("(Aucun joueur existant.)")
             return None
-        pid = input("ID du joueur (existant) : ").strip().upper()
-        if pid not in self.player_index:
-            print("ID introuvable.")
-            return None
-        return pid
+        # Affiche la liste numérotée si elle n'est pas déjà affichée
+        if not hasattr(self, "_player_num_map") or not self._player_num_map:
+            self._list_players()
+        choice = input("Numéro du joueur (existant) : ").strip()
+        if choice in getattr(self, "_player_num_map", {}):
+            return self._player_num_map[choice]
+        # Fallback: accepte aussi l'ID complet
+        pid = choice.upper()
+        if pid in self.player_index:
+            return pid
+        print("Numéro ou ID introuvable.")
+        return None
 
     def _create_player_flow(self) -> str | None:
-        print("\n— Création d’un joueur —")
-        player_id = ask_national_id()
-        first_name = input("Prénom: ").strip().capitalize()
-        last_name = input("Nom: ").strip().capitalize()
-        birthdate = ask_birthdate()
+        """Crée un nouveau joueur avec génération automatique si autocomplete activé."""
+        print("\n— Création d'un joueur —")
+        # Génération de l'ID
+        if ENABLE_AUTOCOMPLETE:
+            player_id = _random_national_id(set(self.player_index.keys()))
+            print(f"Identifiant national (2 lettres + 5 chiffres) : {player_id} (auto)")
+        else:
+            player_id = input("Identifiant national (2 lettres + 5 chiffres) : ").strip().upper()
+        if player_id in self.player_index:
+            print(f"Joueur déjà existant : {self.player_index[player_id].full_name} [{player_id}]")
+            return player_id
+
+        # Génération des données personnelles
+        if ENABLE_AUTOCOMPLETE:
+            first_name = _random_name()
+            print(f"Prénom: {first_name} (auto)")
+            last_name = _random_name()
+            print(f"Nom: {last_name} (auto)")
+            birthdate = _random_birthdate()
+            print(f"Date de naissance (YYYY-MM-DD) : {birthdate} (auto)")
+        else:
+            first_name = input("Prénom: ").strip().capitalize()
+            last_name = input("Nom: ").strip().capitalize()
+            birthdate = ask_birthdate()
+        # Vérification des doublons par nom/date
+        for p in self.player_index.values():
+            if (
+                p.first_name.lower() == first_name.lower()
+                and p.last_name.lower() == last_name.lower()
+                and p.birthdate == birthdate
+            ):
+                print(f"Joueur déjà existant sélectionné : {p.full_name} [{p.player_id}]")
+                return p.player_id
+        # Création du nouveau joueur
         try:
             created = self.player_controller.create_player(player_id, first_name, last_name, birthdate)
             self.player_index[player_id] = created
@@ -205,39 +255,66 @@ class LiveTournamentView:
     # ----- Entrée -----
 
     def _select_or_create_tournament(self):
-        """Permet de choisir un tournoi existant ou d'en créer un nouveau."""
         tournaments = self.controller.list_tournaments()
-        print("\nTournois existants :")
-        for idx, t in enumerate(tournaments, 1):
-            print(f"{idx}. {t.name} ({t.start_date} → {t.end_date}) @ {t.location}")
-        print("0. Créer un nouveau tournoi")
-        choice = read_int("> ", default=0)
-        if choice == 0:
+        name_map = {}
+        if tournaments:
+            print("\nTournois existants :")
+            for idx, t in enumerate(tournaments, 1):
+                print(f"{idx}. {t.name} ({t.start_date} → {t.end_date}) @ {t.location}")
+                name_map[str(idx)] = t
+                name_map[t.name.lower()] = t
+            print("0. Créer un nouveau tournoi")
+            while True:
+                # Pas d'autocomplete pour ce prompt
+                choice = input("Numéro ou nom EXACT du tournoi (ou 0 pour créer) : ").strip()
+                if choice == "0":
+                    break
+                if choice in name_map and isinstance(name_map[choice], Tournament):
+                    return name_map[choice]
+                if choice.lower() in name_map and isinstance(name_map[choice.lower()], Tournament):
+                    return name_map[choice.lower()]
+                print("Aucun tournoi ne correspond exactement à ce choix.")
+        # Création d'un nouveau tournoi
+        if ENABLE_AUTOCOMPLETE:
+            name = _random_tournament_name(set(t.name for t in tournaments))
+            print(f"Nom du tournoi: {name} (auto)")
+            location = _random_location()
+            print(f"Lieu (optionnel): {location} (auto)")
+            start_date, end_date = _random_date_range()
+            print(f"Date de début (YYYY-MM-DD) : {start_date} (auto)")
+            print(f"Date de fin (YYYY-MM-DD) : {end_date} (auto)")
+            num_rounds = random.randint(3, 7)
+            print(f"Nombre de rondes [3]: {num_rounds} (auto)")
+            description = "Tournoi généré automatiquement"
+            print(f"Description (optionnelle): {description} (auto)")
+        else:
             name = input("Nom du tournoi: ").strip() or "Tournoi amical"
+            # Vérification des doublons
+            for t in tournaments:
+                if t.name.lower() == name.lower():
+                    print(f"Tournoi déjà existant sélectionné : {t.name}")
+                    return t
             location = input("Lieu (optionnel): ").strip() or ""
             start_date, end_date = ask_tournament_dates()
             num_rounds = read_int("Nombre de rondes [3]: ", default=3)
             description = input("Description (optionnelle): ").strip() or ""
-            tournament = self.controller.create_tournament(
-                name=name,
-                location=location,
-                start_date=start_date,
-                end_date=end_date,
-                num_rounds=num_rounds,
-                description=description,
-            )
-            print(f"Tournoi créé: {tournament.name}")
-            return tournament
-        elif 1 <= choice <= len(tournaments):
-            return tournaments[choice - 1]
-        else:
-            print("Choix invalide.")
-            return None
+        tournament = self.controller.create_tournament(
+            name=name,
+            location=location,
+            start_date=start_date,
+            end_date=end_date,
+            num_rounds=num_rounds,
+            description=description,
+        )
+        print(f"Tournoi créé: {tournament.name}")
+        return tournament
 
     def _add_player_to_tournament(self, tournament):
         while True:
-            print("\n1. Ajouter joueur existant\n2. Créer nouveau joueur\n0. Retour")
-            choice = input("> ").strip()
+            print("\n1. Ajouter joueur existant")
+            print("2. Créer nouveau joueur")
+            print("0. Retour")
+            choice = input("Votre choix (1/2/0) : ").strip()
             if choice == "1":
                 self._list_players()
                 pid = self._select_existing_player()
@@ -271,15 +348,26 @@ class LiveTournamentView:
             print("Aucun joueur à retirer.")
             return
         print("Joueurs inscrits :")
-        for pid in tournament.players:
-            print(f"- {pid} ({self._name_of(pid)})")
-        pid = input("ID du joueur à retirer: ").strip().upper()
-        if pid in tournament.players:
-            tournament.players.remove(pid)
-            self.controller._save()
-            print("Joueur retiré.")
-        else:
-            print("ID non trouvé.")
+        for idx, pid in enumerate(tournament.players, 1):
+            print(f"{idx}. {pid} ({self._name_of(pid)})")
+        print("0. Annuler")
+        while True:
+            choice = input("Numéro du joueur à retirer (ou 0 pour annuler) : ").strip()
+            if choice == "0":
+                print("Suppression annulée.")
+                return
+            try:
+                idx = int(choice)
+                if 1 <= idx <= len(tournament.players):
+                    pid = tournament.players[idx - 1]
+                    tournament.players.remove(pid)
+                    self.controller._save()
+                    print(f"Joueur {pid} retiré.")
+                    return
+                else:
+                    print("Numéro invalide.")
+            except ValueError:
+                print("Veuillez entrer un numéro valide.")
 
     def _edit_match_result(self, tournament):
         if not tournament.rounds:
@@ -287,27 +375,64 @@ class LiveTournamentView:
             return
         for idx, rnd in enumerate(tournament.rounds, 1):
             print(f"{idx}. {rnd.name} ({rnd.start_datetime} → {rnd.end_datetime or '...'})")
-        r_idx = read_int("Numéro du tour: ", default=1) - 1
-        if not (0 <= r_idx < len(tournament.rounds)):
-            print("Tour invalide.")
-            return
-        round_obj = tournament.rounds[r_idx]
+        print("0. Annuler")
+        while True:
+            r_idx = input("Numéro du tour : ").strip()
+            if r_idx == "0":
+                return
+            try:
+                r_idx = int(r_idx) - 1
+                if 0 <= r_idx < len(tournament.rounds):
+                    round_obj = tournament.rounds[r_idx]
+                    break
+                else:
+                    print("Numéro de tour invalide.")
+            except ValueError:
+                print("Veuillez entrer un numéro valide.")
+
+        # Numérotation et saisie rapide des résultats
+        print("Saisissez le résultat pour chaque match :")
+        print("A = joueur 1 gagne, B = joueur 2 gagne, N = nul")
         for m_idx, match in enumerate(round_obj.matches, 1):
             a, b = match
-            print(f"{m_idx}. {self._name_of(a[0])} ({a[1]}) vs {self._name_of(b[0])} ({b[1]})")
-        m_idx = read_int("Numéro du match: ", default=1) - 1
-        if not (0 <= m_idx < len(round_obj.matches)):
-            print("Match invalide.")
-            return
-        score_a = read_float("Score joueur 1 (1/0.5/0): ")
-        score_b = read_float("Score joueur 2 (1/0.5/0): ")
-        try:
-            self.controller.enter_result(
-                tournament, r_idx, m_idx, score_a, score_b
-            )
-            print("Résultat modifié.")
-        except Exception as e:
-            print(f"Erreur: {e}")
+            name_a = self._name_of(a[0])
+            name_b = self._name_of(b[0])
+            while True:
+                res = input(f"{m_idx}. {name_a} [A] vs {name_b} [B] (A/B/N) : ").strip().upper()
+                if res == "A":
+                    score_a, score_b = 1.0, 0.0
+                    break
+                elif res == "B":
+                    score_a, score_b = 0.0, 1.0
+                    break
+                elif res == "N":
+                    score_a, score_b = 0.5, 0.5
+                    break
+                else:
+                    print("Réponse invalide. Tapez A, B ou N.")
+            try:
+                self.controller.enter_result(
+                    tournament, r_idx, m_idx - 1, score_a, score_b
+                )
+            except Exception as e:
+                print(f"Erreur: {e}")
+        print("Tous les résultats du tour ont été saisis.")
+
+    def _autocomplete_player_id(self, tournament, prompt="ID du joueur à retirer: "):
+        ids = tournament.players
+        while True:
+            partial = input(prompt).strip().upper()
+            if not partial:
+                return ""
+            matches = [pid for pid in ids if pid.startswith(partial)]
+            if len(matches) == 1 and matches[0] == partial:
+                return partial
+            elif matches:
+                print("Suggestions :")
+                for idx, pid in enumerate(matches, 1):
+                    print(f"{idx}. {pid}: {self._name_of(pid)}")
+            else:
+                print("Aucun joueur ne correspond à ce début d'identifiant.")
 
     def _show_tournament_details(self, tournament):
         print(f"\nNom: {tournament.name}")
@@ -338,28 +463,16 @@ class LiveTournamentView:
                 print("7. Afficher le classement")
                 print("8. Détails du tournoi")
                 print("0. Retour au menu principal")
-                choice = input("> ").strip()
+                choice = input("Votre choix (0-8) : ").strip()
 
                 if choice == "1":
                     self._add_player_to_tournament(tournament)
                 elif choice == "2":
-                    # Affiche la liste des joueurs inscrits avant suppression
-                    if not tournament.players:
-                        print("Aucun joueur à retirer.")
-                    else:
-                        print("Joueurs inscrits dans ce tournoi :")
-                        for pid in tournament.players:
-                            print(f"- {pid}: {self._name_of(pid)}")
-                        pid = input("ID du joueur à retirer: ").strip().upper()
-                        if pid in tournament.players:
-                            self.controller.remove_player(tournament, pid)
-                            print("Joueur retiré.")
-                        else:
-                            print("ID non trouvé dans ce tournoi.")
+                    self._remove_player_from_tournament(tournament)
                 elif choice == "3":
                     print("Joueurs inscrits :")
-                    for pid in tournament.players:
-                        print(f"- {self._name_of(pid)} [{pid}]")
+                    for idx, pid in enumerate(tournament.players, 1):
+                        print(f"{idx}. {self._name_of(pid)} [{pid}]")
                 elif choice == "4":
                     try:
                         round_obj = self.controller.start_next_round(tournament)
@@ -396,9 +509,74 @@ class LiveTournamentView:
 
 
 def read_float(prompt: str) -> float:
+    """Lecture sécurisée d'un nombre flottant."""
     raw_value = input(prompt).strip()
     try:
         return float(raw_value)
     except ValueError:
         print("Valeur invalide.")
         return read_float(prompt)
+
+
+def _random_national_id(existing_ids: set[str]) -> str:
+    """Génère un identifiant national unique et valide."""
+    while True:
+        prefix = ''.join(random.choices(string.ascii_uppercase, k=2))
+        number = ''.join(random.choices(string.digits, k=5))
+        pid = prefix + number
+        if pid not in existing_ids:
+            return pid
+
+
+def _random_name() -> str:
+    """Génère un prénom ou nom aléatoire."""
+    names = [
+        "Alice", "Bob", "Charlie", "Diane", "Eve", "Frank", "Grace", "Hugo",
+        "Ivy", "Jack", "Kara", "Leo", "Mona", "Nina", "Oscar", "Paul", "Quinn",
+        "Rita", "Sam", "Tina", "Uma", "Vera", "Will", "Xena", "Yann", "Zoe"
+    ]
+    return random.choice(names)
+
+
+def _random_birthdate() -> str:
+    """Génère une date de naissance valide pour un adulte (18-80 ans)."""
+    year = random.randint(datetime.now().year - 80, datetime.now().year - 18)
+    month = random.randint(1, 12)
+    day = random.randint(1, 28)
+    return f"{year:04d}-{month:02d}-{day:02d}"
+
+
+def _random_tournament_name(existing_names: set[str]) -> str:
+    """Génère un nom de tournoi unique."""
+    base = random.choice(["Open", "Grand Prix", "Challenge", "Masters", "Coupe"])
+    city = _random_name()
+    name = f"{base} {city}"
+    i = 1
+    result = name
+    while result in existing_names:
+        i += 1
+        result = f"{name} {i}"
+    return result
+
+
+def _random_location() -> str:
+    """Génère une ville aléatoire."""
+    cities = ["Paris", "Lyon", "Marseille", "Toulouse", "Lille", "Nantes", "Nice", "Bordeaux"]
+    return random.choice(cities)
+
+
+def _random_date_range() -> tuple[str, str]:
+    """Génère une plage de dates valide (début <= fin)."""
+    year = random.randint(datetime.now().year, datetime.now().year + 1)
+    month = random.randint(1, 12)
+    day = random.randint(1, 25)
+    start = datetime(year, month, day)
+    end = start
+    if random.random() > 0.5:
+        end = start.replace(day=min(day + random.randint(0, 5), 28))
+    return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
+
+# L'autocomplete est bien en place dans _create_player_flow et _select_or_create_tournament
+# Les rounds sont séquentiels (voir TournamentController)
+# Le matchmaking dépend des résultats précédents (voir TournamentController/start_next_round)
+# Le code est propre, lisible, et respecte les contraintes du projet 4

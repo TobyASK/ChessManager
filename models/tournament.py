@@ -73,6 +73,9 @@ class Tournament:
     def start_new_round(self) -> Round:
         if self.current_round_index >= self.num_rounds:
             raise ValueError("Le tournoi est déjà terminé.")
+        # Vérifie qu'il n'y a pas de round en cours (non terminé)
+        if self.rounds and self.rounds[-1].end_datetime is None:
+            raise ValueError("Le tour précédent n'est pas terminé.")
         round_name = f"Round {self.current_round_index + 1}"
         round_obj = Round(
             name=round_name,

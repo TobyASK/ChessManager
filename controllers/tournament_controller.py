@@ -46,12 +46,16 @@ class TournamentController:
             raise ValueError("Joueur introuvable.")
         if player_id not in tournament.players:
             tournament.players.append(player_id)
-            self._save()
+            self._save()  # Sauvegarde automatique après ajout
 
     def start_next_round(self, tournament: Tournament) -> Round:
+        # Les rounds sont séquentiels : on ne peut pas démarrer un nouveau round si le précédent n'est pas terminé
         if tournament.current_round_index >= tournament.num_rounds:
             raise ValueError("Tous les tours ont déjà été joués.")
+        if tournament.rounds and tournament.rounds[-1].end_datetime is None:
+            raise ValueError("Le tour précédent n'est pas terminé.")
         round_obj = tournament.start_new_round()
+        # Le matchmaking dépend des résultats précédents (next_round trie selon les scores)
         if tournament.current_round_index == 0:
             round_obj.matches = first_round(tournament.players)
         else:
@@ -74,11 +78,11 @@ class TournamentController:
             [player_a_id, float(score_player_a)],
             [player_b_id, float(score_player_b)],
         ]
-        self._save()
+        self._save()  # Sauvegarde automatique après saisie du résultat
 
     def end_current_round(self, tournament: Tournament) -> None:
         tournament.end_current_round()
-        self._save()
+        self._save()  # Sauvegarde automatique après clôture du round
 
     def tournament_scores(self, tournament: Tournament) -> Dict[str, float]:
         return compute_scores(tournament.rounds)
@@ -86,12 +90,12 @@ class TournamentController:
     def remove_player(self, tournament: Tournament, player_id: str) -> None:
         if player_id in tournament.players:
             tournament.players.remove(player_id)
-            self._save()
+            self._save()  # Sauvegarde automatique après suppression
 
     def reset_tournament(self, tournament: Tournament) -> None:
         tournament.current_round_index = 0
         tournament.rounds.clear()
-        self._save()
+        self._save()  # Sauvegarde automatique après reset
 
     def get_by_name(self, name: str):
         for t in self.tournaments:

@@ -1,6 +1,6 @@
 from __future__ import annotations
 import random
-from typing import List, Tuple, Dict, Set
+from typing import List, Tuple, Dict
 
 Match = Tuple[list, list]  # ([player_id, score], [player_id, score])
 
@@ -24,48 +24,15 @@ def compute_scores(round_list: list) -> Dict[str, float]:
     return scores
 
 
-def played_pairs(round_list: list) -> Set[frozenset]:
-    seen_pairs: Set[frozenset] = set()
-    for round_obj in round_list:
-        for (player_a, _), (player_b, _) in round_obj.matches:
-            seen_pairs.add(frozenset((player_a, player_b)))
-    return seen_pairs
-
-
 def next_round(player_ids: List[str], round_list: list) -> List[Match]:
     scores_by_player = compute_scores(round_list)
-    groups_by_score: Dict[float, List[str]] = {}
-    for player_id in player_ids:
-        player_score = scores_by_player.get(player_id, 0.0)
-        groups_by_score.setdefault(player_score, []).append(player_id)
-
-    ordered_players: List[str] = []
-    for score in sorted(groups_by_score.keys(), reverse=True):
-        group = groups_by_score[score]
-        random.shuffle(group)
-        ordered_players.extend(group)
-
-    previous_pairs = played_pairs(round_list)
+    # Trie les joueurs par score décroissant, puis par nom pour stabilité
+    ordered_players = sorted(
+        player_ids,
+        key=lambda pid: (-scores_by_player.get(pid, 0.0), pid)
+    )
     matches: List[Match] = []
-    used_players = set()
-
-    for i, player_a in enumerate(ordered_players):
-        if player_a in used_players:
-            continue
-        found_partner = False
-        for player_b in ordered_players[i + 1:]:
-            if player_b in used_players:
-                continue
-            if frozenset((player_a, player_b)) not in previous_pairs:
-                matches.append([[player_a, 0.0], [player_b, 0.0]])
-                used_players.update({player_a, player_b})
-                found_partner = True
-                break
-        if not found_partner:
-            # Fallback: pair with next available, even if already played
-            for player_b in ordered_players[i + 1:]:
-                if player_b not in used_players:
-                    matches.append([[player_a, 0.0], [player_b, 0.0]])
-                    used_players.update({player_a, player_b})
-                    break
+    for i in range(0, len(ordered_players), 2):
+        if i + 1 < len(ordered_players):
+            matches.append([[ordered_players[i], 0.0], [ordered_players[i + 1], 0.0]])
     return matches

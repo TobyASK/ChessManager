@@ -31,7 +31,7 @@ def ask_birthdate() -> str:
 
 
 def ask_tournament_dates() -> tuple[str, str]:
-    """Demande deux dates valides (début et fin), avec fin strictement postérieure à début."""
+    """Demande deux dates valides (début et fin), avec fin identique ou postérieure à début."""
     while True:
         start_str = input("Date de début (YYYY-MM-DD) : ").strip()
         if start_str == "":
@@ -47,7 +47,7 @@ def ask_tournament_dates() -> tuple[str, str]:
         except Exception:
             print("Format invalide. Exemple attendu : 2025-10-03.")
             continue
-        if end <= start:
+        if end < start:
             print("La date de fin doit être identique ou postérieure à la date de début.")
             continue
         return start_str, end_str

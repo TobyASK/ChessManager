@@ -44,7 +44,7 @@ class PlayerController:
         if not hasattr(new_player, "full_name"):
             new_player.full_name = f"{first_name} {last_name}".strip()
         self.players.append(new_player)
-        self._save()
+        self._save()  # Sauvegarde automatique après ajout
         return new_player
 
     def get(self, player_id: str) -> Optional[Player]:
@@ -60,7 +60,7 @@ class PlayerController:
         for key, value in kwargs.items():
             if hasattr(player, key):
                 setattr(player, key, value)
-        self._save()
+        self._save()  # Sauvegarde automatique après modification
         return player
 
     def print_all(self) -> None:
