@@ -419,20 +419,8 @@ class LiveTournamentView:
         print("Tous les résultats du tour ont été saisis.")
 
     def _autocomplete_player_id(self, tournament, prompt="ID du joueur à retirer: "):
-        ids = tournament.players
-        while True:
-            partial = input(prompt).strip().upper()
-            if not partial:
-                return ""
-            matches = [pid for pid in ids if pid.startswith(partial)]
-            if len(matches) == 1 and matches[0] == partial:
-                return partial
-            elif matches:
-                print("Suggestions :")
-                for idx, pid in enumerate(matches, 1):
-                    print(f"{idx}. {pid}: {self._name_of(pid)}")
-            else:
-                print("Aucun joueur ne correspond à ce début d'identifiant.")
+        # Fonction inutile si on ne veut pas d'autocomplete partiel, donc on peut la supprimer
+        pass
 
     def _show_tournament_details(self, tournament):
         print(f"\nNom: {tournament.name}")
@@ -575,8 +563,3 @@ def _random_date_range() -> tuple[str, str]:
     if random.random() > 0.5:
         end = start.replace(day=min(day + random.randint(0, 5), 28))
     return start.strftime("%Y-%m-%d"), end.strftime("%Y-%m-%d")
-
-# L'autocomplete est bien en place dans _create_player_flow et _select_or_create_tournament
-# Les rounds sont séquentiels (voir TournamentController)
-# Le matchmaking dépend des résultats précédents (voir TournamentController/start_next_round)
-# Le code est propre, lisible, et respecte les contraintes du projet 4

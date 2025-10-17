@@ -40,11 +40,8 @@ class PlayerController:
             last_name=last_name,
             birthdate=birthdate,
         )
-        # Ajoute full_name si absent
-        if not hasattr(new_player, "full_name"):
-            new_player.full_name = f"{first_name} {last_name}".strip()
         self.players.append(new_player)
-        self._save()  # Sauvegarde automatique après ajout
+        self._save()
         return new_player
 
     def get(self, player_id: str) -> Optional[Player]:
@@ -60,7 +57,7 @@ class PlayerController:
         for key, value in kwargs.items():
             if hasattr(player, key):
                 setattr(player, key, value)
-        self._save()  # Sauvegarde automatique après modification
+        self._save()
         return player
 
     def print_all(self) -> None:

@@ -200,5 +200,180 @@
       "EY12240"
     ],
     "description": "Tournoi généré automatiquement"
+  },
+  {
+    "name": "Grand Prix Diane",
+    "location": "Marseille",
+    "start_date": "2026-06-07",
+    "end_date": "2026-06-07",
+    "num_rounds": 4,
+    "current_round_index": 0,
+    "rounds": [],
+    "players": [
+      "HZ53413"
+    ],
+    "description": "Tournoi généré automatiquement"
+  },
+  {
+    "name": "Masters Paul",
+    "location": "Lille",
+    "start_date": "2025-07-05",
+    "end_date": "2025-07-05",
+    "num_rounds": 5,
+    "current_round_index": 2,
+    "rounds": [
+      {
+        "name": "Round 1",
+        "start_datetime": "2025-10-17T13:45:17",
+        "end_datetime": "2025-10-17T13:45:50",
+        "matches": [
+          [
+            [
+              "AG22334",
+              1.0
+            ],
+            [
+              "TZ89485",
+              0.0
+            ]
+          ],
+          [
+            [
+              "OC21979",
+              0.0
+            ],
+            [
+              "HZ53413",
+              1.0
+            ]
+          ],
+          [
+            [
+              "ES77889",
+              1.0
+            ],
+            [
+              "PW01889",
+              0.0
+            ]
+          ],
+          [
+            [
+              "EY12240",
+              0.0
+            ],
+            [
+              "AB25896",
+              1.0
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Round 2",
+        "start_datetime": "2025-10-17T13:45:55",
+        "end_datetime": "2025-10-17T13:46:56",
+        "matches": [
+          [
+            [
+              "AB25896",
+              1.0
+            ],
+            [
+              "AG22334",
+              0.0
+            ]
+          ],
+          [
+            [
+              "ES77889",
+              1.0
+            ],
+            [
+              "HZ53413",
+              0.0
+            ]
+          ],
+          [
+            [
+              "EY12240",
+              0.0
+            ],
+            [
+              "OC21979",
+              1.0
+            ]
+          ],
+          [
+            [
+              "PW01889",
+              1.0
+            ],
+            [
+              "TZ89485",
+              0.0
+            ]
+          ]
+        ]
+      },
+      {
+        "name": "Round 3",
+        "start_datetime": "2025-10-17T13:46:57",
+        "end_datetime": null,
+        "matches": [
+          [
+            [
+              "AB25896",
+              0.0
+            ],
+            [
+              "ES77889",
+              0.0
+            ]
+          ],
+          [
+            [
+              "AG22334",
+              0.0
+            ],
+            [
+              "HZ53413",
+              0.0
+            ]
+          ],
+          [
+            [
+              "OC21979",
+              0.0
+            ],
+            [
+              "PW01889",
+              0.0
+            ]
+          ],
+          [
+            [
+              "EY12240",
+              0.0
+            ],
+            [
+              "TZ89485",
+              0.0
+            ]
+          ]
+        ]
+      }
+    ],
+    "players": [
+      "OC21979",
+      "TZ89485",
+      "AG22334",
+      "AB25896",
+      "ES77889",
+      "PW01889",
+      "HZ53413",
+      "EY12240"
+    ],
+    "description": "Tournoi généré automatiquement"
   }
 ]
